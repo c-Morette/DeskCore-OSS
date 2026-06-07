@@ -6,7 +6,11 @@ Sistema Web de **tickets e atendimento** para empresas, com implantação dedica
 >
 > 🔧 **Antes de publicar/implantar a sua instância**, personalize a marca e os dados do controlador — veja [Personalização & marca](#personalização--marca).
 
+![Painel do DeskCore](docs/screenshots/02-dashboard.png)
+
 ## Índice
+
+- [Telas](#-telas)
 
 - [Stack](#stack)
 - [Arquitetura](#arquitetura)
@@ -21,6 +25,27 @@ Sistema Web de **tickets e atendimento** para empresas, com implantação dedica
 - [Migrations](#migrations)
 - [Testes](#testes)
 - [Roadmap](#roadmap)
+
+## 📸 Telas
+
+Tema escuro "terminal" com acento dourado, bilíngue PT-BR / English.
+
+<table>
+  <tr>
+    <td width="50%"><b>Login</b><br/><img src="docs/screenshots/01-login.png" alt="Tela de login" /></td>
+    <td width="50%"><b>Lista de tickets</b> (filtros, status, prioridade)<br/><img src="docs/screenshots/03-tickets.png" alt="Lista de tickets" /></td>
+  </tr>
+  <tr>
+    <td width="50%"><b>Detalhe do ticket</b> (comentários, anexos, ações)<br/><img src="docs/screenshots/04-ticket-detail.png" alt="Detalhe do ticket" /></td>
+    <td width="50%"><b>Métricas</b> (KPIs e gráficos)<br/><img src="docs/screenshots/05-metrics.png" alt="Painel de métricas" /></td>
+  </tr>
+  <tr>
+    <td width="50%"><b>Administração de usuários</b><br/><img src="docs/screenshots/06-admin-users.png" alt="Administração de usuários" /></td>
+    <td width="50%"></td>
+  </tr>
+</table>
+
+> As capturas usam dados de demonstração gerados por `tools/seed_demo.py` (uso local).
 
 ## Stack
 
