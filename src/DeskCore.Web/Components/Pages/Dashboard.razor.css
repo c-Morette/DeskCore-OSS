@@ -1,0 +1,58 @@
+.dc-stat {
+    display: block;
+    height: 100%;
+    padding: 1.1rem 1.2rem 1rem;
+    background: var(--dc-panel);
+    border: 1px solid var(--dc-border);
+    border-radius: 0.6rem;
+    transition: border-color .15s, transform .15s;
+}
+.dc-stat:hover {
+    border-color: var(--dc-gold-border);
+    transform: translateY(-2px);
+}
+
+.dc-stat-label {
+    font-size: 0.66rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--dc-text-dim);
+    font-weight: 500;
+    margin-bottom: 0.7rem;
+}
+
+.dc-stat-row {
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+}
+
+.dc-stat-ico {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.4rem;
+    height: 2.4rem;
+    border-radius: 0.5rem;
+    flex: 0 0 auto;
+}
+.dc-stat-ico--gold  { color: var(--dc-gold);  background: rgba(242,199,68,0.12); }
+.dc-stat-ico--green { color: var(--dc-green); background: rgba(63,185,80,0.12); }
+.dc-stat-ico--blue  { color: var(--dc-blue);  background: rgba(88,166,255,0.12); }
+.dc-stat-ico--teal  { color: var(--dc-teal);  background: rgba(45,212,191,0.12); }
+.dc-stat-ico--muted { color: var(--dc-muted); background: rgba(139,148,158,0.12); }
+
+.dc-stat-num {
+    font-size: 2.4rem;
+    font-weight: 700;
+    line-height: 1;
+    color: var(--dc-text);
+    letter-spacing: 0.02em;
+}
+
+.dc-stat-unit {
+    margin-top: 0.5rem;
+    font-size: 0.72rem;
+    color: var(--dc-text-faint);
+    text-transform: lowercase;
+}

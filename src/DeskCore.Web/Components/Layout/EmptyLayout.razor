@@ -1,0 +1,19 @@
+@inherits LayoutComponentBase
+@inject NavigationManager Nav
+
+<div class="dc-lang dc-lang-float" title="Idioma / Language">
+    <a href="/language/pt-BR?returnUrl=@ReturnUrlParam" class="@(Loc.IsEnglish ? "" : "dc-lang-active")" data-enhance-nav="false">PT</a>
+    <span class="dc-lang-sep">/</span>
+    <a href="/language/en?returnUrl=@ReturnUrlParam" class="@(Loc.IsEnglish ? "dc-lang-active" : "")" data-enhance-nav="false">EN</a>
+</div>
+
+<div class="dc-auth">
+    <div class="dc-auth-inner">
+        @Body
+    </div>
+    <div class="dc-auth-foot">DESKCORE // @Loc.T("SISTEMA DE TICKETS", "TICKET SYSTEM")</div>
+</div>
+
+@code {
+    private string ReturnUrlParam => Uri.EscapeDataString("/" + Nav.ToBaseRelativePath(Nav.Uri));
+}

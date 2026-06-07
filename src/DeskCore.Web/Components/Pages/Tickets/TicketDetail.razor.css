@@ -1,0 +1,16 @@
+.dc-comment {
+    border-left: 2px solid var(--dc-border-strong);
+    padding-left: 0.85rem;
+    margin-bottom: 1rem;
+}
+.dc-comment--internal {
+    border-left-color: var(--dc-gold);
+    background: var(--dc-gold-dim);
+    border-radius: 0 0.4rem 0.4rem 0;
+    padding: 0.55rem 0.85rem;
+}
+
+.dc-page-title.h4 {
+    font-size: 1.3rem;
+    text-transform: none;
+}

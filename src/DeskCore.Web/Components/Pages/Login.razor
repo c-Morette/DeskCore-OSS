@@ -1,0 +1,63 @@
+@page "/login"
+@layout EmptyLayout
+@attribute [AllowAnonymous]
+@using Microsoft.Extensions.Configuration
+@inject IConfiguration Config
+
+<PageTitle>@Loc.T("Entrar", "Sign in") — DeskCore</PageTitle>
+
+<div class="card">
+    <div class="card-body p-4">
+        <div class="text-center mb-4">
+            <div class="dc-login-brand"><span class="dc-login-mark">◆</span> DESK<span class="dc-login-accent">CORE</span></div>
+            <div class="dc-login-sub">@Loc.T("Acesso ao sistema de tickets", "Ticket system access")</div>
+        </div>
+
+        @if (ResetDone)
+        {
+            <div class="alert alert-success py-2">@Loc.T("Senha redefinida! Você já pode entrar com a nova senha.", "Password reset! You can now sign in with your new password.")</div>
+        }
+
+        @if (HasError)
+        {
+            <div class="alert alert-danger py-2">@Loc.T("E-mail ou senha inválidos.", "Invalid email or password.")</div>
+        }
+
+        <form action="/account/login" method="post">
+            <AntiforgeryToken />
+            <input type="hidden" name="returnUrl" value="@ReturnUrl" />
+            <div class="mb-3">
+                <label class="form-label">@Loc.T("E-mail", "Email")</label>
+                <input name="email" type="email" class="form-control" autocomplete="username" required />
+            </div>
+            <div class="mb-3">
+                <label class="form-label">@Loc.T("Senha", "Password")</label>
+                <input name="password" type="password" class="form-control" autocomplete="current-password" required />
+            </div>
+            <button type="submit" class="btn btn-primary w-100">@Loc.T("Entrar", "Sign in")</button>
+        </form>
+
+        @if (SelfServiceEnabled)
+        {
+            <div class="text-center mt-3 dc-login-sub">
+                <a href="/esqueci-senha" data-enhance-nav="false">@Loc.T("Esqueci minha senha", "Forgot my password")</a>
+            </div>
+
+            <div class="text-center mt-2 dc-login-sub">
+                @Loc.T("Não tem conta?", "No account?") <a href="/cadastro" data-enhance-nav="false">@Loc.T("Criar conta", "Create account")</a>
+            </div>
+        }
+    </div>
+</div>
+
+@code {
+    [SupplyParameterFromQuery] private string? ReturnUrl { get; set; }
+    [SupplyParameterFromQuery(Name = "error")] private string? Error { get; set; }
+    [SupplyParameterFromQuery(Name = "reset")] private string? Reset { get; set; }
+
+    private bool HasError => !string.IsNullOrEmpty(Error);
+    private bool ResetDone => Reset == "1";
+
+    // Modo privado: com o auto-serviço desligado, somem "Criar conta" e "Esqueci minha senha".
+    private bool SelfServiceEnabled => Config.GetValue("SelfService:Enabled", true);
+}

@@ -1,0 +1,198 @@
+@page "/"
+@attribute [Authorize]
+@inject DeskCoreApiClient Api
+
+<PageTitle>@Loc.T("Painel", "Dashboard") — DeskCore</PageTitle>
+
+<div class="dc-page-head">
+    <div>
+        <h1 class="dc-page-title">@Loc.T("PAINEL", "DASHBOARD")<span class="dc-cursor">_</span></h1>
+        <div class="dc-page-subtitle">@Loc.T("Visão geral do sistema de tickets", "Ticket system overview")</div>
+    </div>
+    <a class="btn btn-primary" href="/tickets/novo">+ @Loc.T("Novo ticket", "New ticket")</a>
+</div>
+
+@if (loading)
+{
+    <p class="text-muted">@Loc.T("Carregando...", "Loading...")</p>
+}
+else if (error is not null)
+{
+    <div class="alert alert-danger">@error</div>
+}
+else
+{
+    <div class="row g-3 mb-4">
+        @foreach (var status in DashboardStatuses)
+        {
+            <div class="col-6 col-xl-3">
+                <a class="dc-stat" href="@($"/tickets?status={status}")">
+                    <div class="dc-stat-label">@Labels.Status(status)</div>
+                    <div class="dc-stat-row">
+                        <span class="dc-stat-ico dc-stat-ico--@StatusColor(status)">@StatusIcon(status)</span>
+                        <span class="dc-stat-num">@counts.GetValueOrDefault(status).ToString("D2")</span>
+                    </div>
+                    <div class="dc-stat-unit">tickets</div>@* termo igual em PT/EN *@
+                </a>
+            </div>
+        }
+    </div>
+
+    <div class="row g-3">
+        <div class="col-lg-7">
+            <div class="card h-100">
+                <div class="card-header dc-card-header-row">
+                    <span>@Loc.T("Últimos Tickets", "Latest Tickets")</span>
+                    <a class="dc-card-link" href="/tickets">@Loc.T("Ver todos", "View all") →</a>
+                </div>
+                <div class="card-body p-0">
+                    @if (recent.Count == 0)
+                    {
+                        <p class="text-muted m-3">@Loc.T("Nenhum ticket ainda.", "No tickets yet.")</p>
+                    }
+                    else
+                    {
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle mb-0">
+                                <thead>
+                                    <tr><th>ID</th><th>@Loc.T("Título", "Title")</th><th>Status</th><th>@Loc.T("Prioridade", "Priority")</th><th class="text-nowrap">@Loc.T("Atualizado", "Updated")</th></tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var t in recent)
+                                    {
+                                        <tr role="button" @onclick="@(() => Open(t.Id))">
+                                            <td class="text-nowrap dc-mono-gold">@t.Number</td>
+                                            <td>@t.Title</td>
+                                            <td><span class="@Labels.StatusBadge(t.Status)">@Labels.Status(t.Status)</span></td>
+                                            <td><span class="@Labels.PriorityBadge(t.Priority)">@Labels.Priority(t.Priority)</span></td>
+                                            <td class="text-nowrap text-muted">@t.UpdatedAt.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-5">
+            <div class="card h-100">
+                <div class="card-header dc-card-header-row">
+                    <span>@Loc.T("Atividade Recente", "Recent Activity")</span>
+                </div>
+                <div class="card-body p-0">
+                    @if (activity.Count == 0)
+                    {
+                        <p class="text-muted m-3">@Loc.T("Nenhuma atividade ainda.", "No activity yet.")</p>
+                    }
+                    else
+                    {
+                        <ul class="list-group list-group-flush">
+                            @foreach (var a in activity)
+                            {
+                                <li class="list-group-item dc-activity" role="button" @onclick="@(() => Open(a.TicketId))">
+                                    <div class="d-flex justify-content-between align-items-start gap-2">
+                                        <div style="min-width:0">
+                                            <span class="dc-badge dc-badge--@Labels.AuditActionColor(a.Action)">@Labels.AuditAction(a.Action)</span>
+                                            <span class="dc-mono-gold ms-1">@a.TicketNumber</span>
+                                            <div class="small text-truncate">@a.TicketTitle</div>
+                                        </div>
+                                        <div class="text-end flex-shrink-0">
+                                            <div class="small text-muted text-nowrap">@RelativeTime(a.CreatedAt)</div>
+                                            <div class="small text-muted text-nowrap">@(a.UserName ?? Loc.T("Sistema", "System"))</div>
+                                        </div>
+                                    </div>
+                                </li>
+                            }
+                        </ul>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [CascadingParameter] private Task<AuthenticationState>? AuthState { get; set; }
+    [Inject] private NavigationManager Nav { get; set; } = default!;
+
+    private bool loading = true;
+    private string? error;
+    private readonly Dictionary<TicketStatus, long> counts = new();
+    private IReadOnlyList<TicketListItemResponse> recent = [];
+    private IReadOnlyList<RecentActivityResponse> activity = [];
+
+    private static readonly TicketStatus[] DashboardStatuses =
+        [TicketStatus.WaitingAgent, TicketStatus.InProgress, TicketStatus.WaitingUser, TicketStatus.Resolved];
+
+    protected override async Task OnInitializedAsync()
+    {
+        // O Painel é área de atendimento/admin. Cliente (User) cai nos próprios tickets.
+        if (AuthState is not null)
+        {
+            var user = (await AuthState).User;
+            if (!(user.IsInRole(Roles.Agent) || user.IsInRole(Roles.Admin)))
+            {
+                Nav.NavigateTo("/tickets", replace: true);
+                return;
+            }
+        }
+
+        try
+        {
+            foreach (var status in DashboardStatuses)
+                counts[status] = (await Api.ListTicketsAsync(status, 1, 1)).TotalCount;
+
+            recent = (await Api.ListTicketsAsync(null, 1, 5)).Items;
+            activity = await Api.GetRecentActivityAsync(10);
+        }
+        catch (ApiException ex)
+        {
+            error = ex.Message;
+        }
+        finally
+        {
+            loading = false;
+        }
+    }
+
+    private void Open(long id) => Nav.NavigateTo($"/tickets/{id}");
+
+    private static string RelativeTime(DateTime utc)
+    {
+        var span = DateTime.UtcNow - utc;
+        if (span < TimeSpan.FromMinutes(1)) return Loc.T("agora", "now");
+        if (span < TimeSpan.FromHours(1)) return Loc.T($"há {(int)span.TotalMinutes} min", $"{(int)span.TotalMinutes} min ago");
+        if (span < TimeSpan.FromDays(1)) return Loc.T($"há {(int)span.TotalHours} h", $"{(int)span.TotalHours} h ago");
+        if (span < TimeSpan.FromDays(2)) return Loc.T("ontem", "yesterday");
+        if (span < TimeSpan.FromDays(7)) return Loc.T($"há {(int)span.TotalDays} d", $"{(int)span.TotalDays} d ago");
+        return utc.ToLocalTime().ToString("dd/MM/yyyy");
+    }
+
+    private static string StatusColor(TicketStatus s) => s switch
+    {
+        TicketStatus.WaitingAgent => "gold",
+        TicketStatus.InProgress => "green",
+        TicketStatus.WaitingUser => "blue",
+        TicketStatus.Resolved => "teal",
+        _ => "muted"
+    };
+
+    private static MarkupString StatusIcon(TicketStatus s)
+    {
+        var path = s switch
+        {
+            TicketStatus.WaitingAgent =>
+                "M15 14s1 0 1-1-1-4-5-4-5 3-5 4 1 1 1 1zM11 7a3 3 0 1 0 0-6 3 3 0 0 0 0 6m-5.784 6A2.24 2.24 0 0 1 5 13c0-1.355.68-2.75 1.936-3.72A6.3 6.3 0 0 0 5 9c-4 0-5 3-5 4s1 1 1 1zM4.5 8a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5",
+            TicketStatus.InProgress =>
+                "M6 2a.5.5 0 0 1 .47.33L10 12.036l1.53-4.208A.5.5 0 0 1 12 7.5h3.5a.5.5 0 0 1 0 1h-3.15l-1.88 5.17a.5.5 0 0 1-.94 0L6 3.964 4.47 8.171A.5.5 0 0 1 4 8.5H.5a.5.5 0 0 1 0-1h3.15l1.88-5.17A.5.5 0 0 1 6 2",
+            TicketStatus.WaitingUser =>
+                "M8 3.5a.5.5 0 0 0-1 0V9a.5.5 0 0 0 .252.434l3.5 2a.5.5 0 0 0 .496-.868L8 8.71zM8 16A8 8 0 1 0 8 0a8 8 0 0 0 0 16m7-8A7 7 0 1 1 1 8a7 7 0 0 1 14 0",
+            TicketStatus.Resolved =>
+                "M16 8A8 8 0 1 1 0 8a8 8 0 0 1 16 0m-3.97-3.03a.75.75 0 0 0-1.08.022L7.477 9.417 5.384 7.323a.75.75 0 0 0-1.06 1.06L6.97 11.03a.75.75 0 0 0 1.079-.02l3.992-4.99a.75.75 0 0 0-.01-1.05",
+            _ => "M8 16A8 8 0 1 0 8 0a8 8 0 0 0 0 16"
+        };
+        return new MarkupString($"<svg viewBox=\"0 0 16 16\" fill=\"currentColor\" width=\"18\" height=\"18\" aria-hidden=\"true\"><path d=\"{path}\"/></svg>");
+    }
+}

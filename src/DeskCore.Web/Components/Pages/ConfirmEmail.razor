@@ -1,0 +1,30 @@
+@page "/confirmar-email"
+@layout EmptyLayout
+@attribute [AllowAnonymous]
+
+<PageTitle>@Loc.T("Confirmação de e-mail", "Email confirmation") — DeskCore</PageTitle>
+
+<div class="card">
+    <div class="card-body p-4 text-center">
+        <div class="dc-login-brand mb-3"><span class="dc-login-mark">◆</span> DESK<span class="dc-login-accent">CORE</span></div>
+
+        @if (Status == "ok")
+        {
+            <div class="alert alert-success py-2">
+                @Loc.T("E-mail confirmado! Sua conta está ativa.", "Email confirmed! Your account is now active.")
+            </div>
+            <a class="btn btn-primary w-100" href="/login" data-enhance-nav="false">@Loc.T("Entrar", "Sign in")</a>
+        }
+        else
+        {
+            <div class="alert alert-danger py-2">
+                @Loc.T("Não foi possível confirmar o e-mail. O link pode ter expirado ou já ter sido usado.", "Could not confirm your email. The link may have expired or already been used.")
+            </div>
+            <a class="btn btn-outline-secondary w-100" href="/login" data-enhance-nav="false">@Loc.T("Voltar ao login", "Back to sign in")</a>
+        }
+    </div>
+</div>
+
+@code {
+    [SupplyParameterFromQuery(Name = "status")] private string? Status { get; set; }
+}

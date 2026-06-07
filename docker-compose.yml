@@ -1,0 +1,115 @@
+name: deskcore
+
+services:
+  deskcore-postgres:
+    image: postgres:16
+    container_name: deskcore-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - deskcore-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  deskcore-api:
+    build:
+      context: .
+      dockerfile: src/DeskCore.Api/Dockerfile
+    image: deskcore-api:latest
+    container_name: deskcore-api
+    restart: unless-stopped
+    depends_on:
+      deskcore-postgres:
+        condition: service_healthy
+    environment:
+      ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT:-Production}
+      ConnectionStrings__DefaultConnection: "Host=deskcore-postgres;Port=5432;Database=${POSTGRES_DB};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}"
+      FileStorage__RootPath: /app/uploads
+      DataProtection__KeysPath: /app/keys
+      # Rede interna do compose: confiar no Nginx para X-Forwarded-* (IP real / scheme).
+      ForwardedHeaders__KnownNetworks__0: 172.28.0.0/16
+      SEED_ADMIN_EMAIL: ${SEED_ADMIN_EMAIL}
+      SEED_ADMIN_PASSWORD: ${SEED_ADMIN_PASSWORD}
+      SEED_ADMIN_FULLNAME: ${SEED_ADMIN_FULLNAME}
+      # Auto-serviço do titular (cadastro + recuperação de senha). false => modo privado:
+      # só o Admin cria contas e redefine senhas. A API é a fonte da verdade.
+      SelfService__Enabled: ${SelfService__Enabled:-true}
+      # URL pública (link de confirmação no e-mail de cadastro).
+      APP_PUBLIC_URL: ${APP_PUBLIC_URL}
+      # SMTP (Resend) — auto-cadastro/confirmação. Vazio => envio desativado.
+      Email__Smtp__Host: ${Email__Smtp__Host:-}
+      Email__Smtp__Port: ${Email__Smtp__Port:-587}
+      Email__Smtp__User: ${Email__Smtp__User:-}
+      Email__Smtp__Password: ${Email__Smtp__Password:-}
+      Email__Smtp__From: ${Email__Smtp__From:-}
+      Email__Smtp__FromName: ${Email__Smtp__FromName:-DeskCore}
+      Email__Smtp__UseStartTls: ${Email__Smtp__UseStartTls:-true}
+    volumes:
+      - uploads_data:/app/uploads
+      - logs_data:/app/logs
+      - dataprotection_keys:/app/keys
+    networks:
+      - deskcore-network
+
+  deskcore-web:
+    build:
+      context: .
+      dockerfile: src/DeskCore.Web/Dockerfile
+    image: deskcore-web:latest
+    container_name: deskcore-web
+    restart: unless-stopped
+    depends_on:
+      - deskcore-api
+    environment:
+      ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT:-Production}
+      ApiSettings__BaseUrl: http://deskcore-api:8080
+      DataProtection__KeysPath: /app/keys
+      ForwardedHeaders__KnownNetworks__0: 172.28.0.0/16
+      # Auto-serviço do titular. false => esconde /cadastro, "Criar conta" e "Esqueci minha senha".
+      SelfService__Enabled: ${SelfService__Enabled:-true}
+      # Anti-bot Cloudflare Turnstile (auto-cadastro). Vazio => verificação pulada.
+      Turnstile__SiteKey: ${Turnstile__SiteKey:-}
+      Turnstile__SecretKey: ${Turnstile__SecretKey:-}
+    volumes:
+      - dataprotection_keys:/app/keys
+    networks:
+      - deskcore-network
+
+  deskcore-nginx:
+    image: nginx:alpine
+    container_name: deskcore-nginx
+    restart: unless-stopped
+    depends_on:
+      - deskcore-web
+      - deskcore-api
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./docker/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./docker/nginx/certs:/etc/nginx/certs:ro
+      - certbot_www:/var/www/certbot
+    networks:
+      - deskcore-network
+
+volumes:
+  postgres_data:
+  uploads_data:
+  logs_data:
+  dataprotection_keys:
+  certbot_www:
+
+networks:
+  deskcore-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.28.0.0/16

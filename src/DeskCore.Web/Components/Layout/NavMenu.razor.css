@@ -1,0 +1,106 @@
+.dc-nav {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    padding: 0;
+}
+
+/* ---- Brand ---- */
+.dc-brand {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    height: 3.6rem;
+    padding: 0 1.25rem;
+    border-bottom: 1px solid var(--dc-border);
+    flex: 0 0 auto;
+}
+.dc-brand-mark {
+    color: var(--dc-gold);
+    font-size: 1.1rem;
+    text-shadow: 0 0 10px rgba(242, 199, 68, 0.5);
+}
+.dc-brand-text {
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    font-size: 1.05rem;
+    color: var(--dc-text);
+}
+.dc-brand-accent { color: var(--dc-gold); }
+
+/* ---- Nav list ---- */
+.dc-nav-list {
+    flex: 1 1 auto;
+    overflow-y: auto;
+    padding: 1.1rem 0.75rem;
+}
+
+.dc-section-label {
+    font-size: 0.66rem;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--dc-text-faint);
+    font-weight: 500;
+    padding: 0 0.6rem;
+    margin-bottom: 0.55rem;
+}
+.dc-section-admin { margin-top: 1.5rem; }
+
+.dc-nav-list ::deep a.dc-nav-link {
+    display: flex;
+    align-items: center;
+    gap: 0.7rem;
+    height: 2.7rem;
+    padding: 0 0.75rem;
+    margin-bottom: 0.2rem;
+    border-radius: 0.45rem;
+    color: var(--dc-text-dim);
+    font-size: 0.86rem;
+    font-weight: 500;
+    border-left: 2px solid transparent;
+    transition: color .15s, background .15s, border-color .15s;
+    text-decoration: none;
+}
+.dc-nav-list ::deep a.dc-nav-link:hover {
+    color: var(--dc-text);
+    background: rgba(255, 255, 255, 0.04);
+}
+.dc-nav-list ::deep a.dc-nav-link.active {
+    color: var(--dc-gold);
+    background: var(--dc-gold-dim);
+    border-left-color: var(--dc-gold);
+}
+
+.dc-nav-ico {
+    width: 1.05rem;
+    height: 1.05rem;
+    flex: 0 0 auto;
+    opacity: 0.9;
+}
+
+/* ---- System info ---- */
+.dc-sysinfo {
+    flex: 0 0 auto;
+    margin: 0.75rem;
+    padding: 0.9rem;
+    border: 1px solid var(--dc-border);
+    border-radius: 0.5rem;
+    background: var(--dc-panel);
+}
+.dc-sysinfo .dc-section-label { padding: 0; margin-bottom: 0.7rem; }
+.dc-sysinfo-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    font-size: 0.72rem;
+    color: var(--dc-text-dim);
+    margin-bottom: 0.35rem;
+}
+.dc-sysinfo-val { color: var(--dc-text); font-weight: 500; }
+.dc-copyright {
+    margin-top: 0.7rem;
+    padding-top: 0.6rem;
+    border-top: 1px solid var(--dc-border);
+    font-size: 0.66rem;
+    color: var(--dc-text-faint);
+}

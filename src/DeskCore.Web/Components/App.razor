@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="@(Loc.IsEnglish ? "en" : "pt-BR")" data-bs-theme="dark">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <base href="/" />
+    <ResourcePreloader />
+    <link rel="stylesheet" href="@Assets["lib/bootstrap/dist/css/bootstrap.min.css"]" />
+    <link rel="stylesheet" href="@Assets["app.css"]" />
+    <link rel="stylesheet" href="@Assets["css/deskcore-theme.css"]" />
+    <link rel="stylesheet" href="@Assets["DeskCore.Web.styles.css"]" />
+    <script src="@Assets["js/theme.js"]"></script>
+    <ImportMap />
+    <link rel="icon" type="image/svg+xml" href="favicon.svg?v=3" />
+
+    <meta name="description" content="Open and track support tickets. DeskCore — open-source ticket system." />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="DeskCore" />
+    <meta property="og:title" content="DeskCore — Ticket system" />
+    <meta property="og:description" content="Open and track support tickets." />
+    <meta property="og:url" content="https://your-domain.example" />
+    <meta property="og:image" content="https://your-domain.example/og-image.png?v=2" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="DeskCore — Ticket system" />
+    <meta name="twitter:description" content="Open and track support tickets." />
+    <meta name="twitter:image" content="https://your-domain.example/og-image.png?v=2" />
+
+    <HeadOutlet />
+</head>
+
+<body>
+    <Routes @rendermode="InteractiveServer" />
+    <ReconnectModal />
+    <script src="@Assets["_framework/blazor.web.js"]"></script>
+    <script src="@Assets["js/cookie-notice.js"]" defer></script>
+</body>
+
+</html>

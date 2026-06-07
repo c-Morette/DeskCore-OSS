@@ -1,0 +1,256 @@
+@page "/admin/usuarios"
+@attribute [Authorize(Roles = Roles.Admin)]
+@using System.ComponentModel.DataAnnotations
+@inject DeskCoreApiClient Api
+
+<PageTitle>@Loc.T("Usuários", "Users") — DeskCore</PageTitle>
+
+<div class="dc-page-head">
+    <div>
+        <h1 class="dc-page-title">@Loc.T("USUÁRIOS", "USERS")<span class="dc-cursor">_</span></h1>
+        <div class="dc-page-subtitle">@Loc.T("Gerencie os acessos ao sistema", "Manage system access")</div>
+    </div>
+</div>
+
+@if (error is not null)
+{
+    <div class="alert alert-danger">@error</div>
+}
+
+@if (pwUserId is not null)
+{
+    <div class="card mb-4 border-warning">
+        <div class="card-header">@Loc.T("Redefinir senha de", "Reset password for") <strong>@pwUserName</strong></div>
+        <div class="card-body">
+            @if (pwError is not null)
+            {
+                <div class="alert alert-danger py-2">@pwError</div>
+            }
+            <div class="row g-3 align-items-end">
+                <div class="col-md-5">
+                    <label class="form-label">@Loc.T("Nova senha", "New password")</label>
+                    <input type="password" class="form-control" @bind="pwValue" autocomplete="new-password" />
+                </div>
+                <div class="col-md-5">
+                    <label class="form-label">@Loc.T("Confirmar senha", "Confirm password")</label>
+                    <input type="password" class="form-control" @bind="pwConfirm" autocomplete="new-password" />
+                </div>
+                <div class="col-md-2 d-flex gap-2">
+                    <button class="btn btn-primary" @onclick="SavePasswordAsync" disabled="@busy">@Loc.T("Salvar", "Save")</button>
+                    <button class="btn btn-outline-secondary" @onclick="CancelPasswordReset" disabled="@busy">@Loc.T("Cancelar", "Cancel")</button>
+                </div>
+            </div>
+            <div class="form-text mt-2">@Loc.T("Mínimo 12 caracteres, com maiúscula, minúscula, dígito e símbolo. O usuário entrará com a nova senha (as sessões atuais são encerradas).", "At least 12 characters, with uppercase, lowercase, digit and symbol. The user will sign in with the new password (current sessions are ended).")</div>
+        </div>
+    </div>
+}
+
+<div class="row g-4">
+    <div class="col-lg-5">
+        <div class="card">
+            <div class="card-header">@Loc.T("Novo usuário", "New user")</div>
+            <div class="card-body">
+                <EditForm Model="form" OnValidSubmit="CreateAsync">
+                    <DataAnnotationsValidator />
+                    <div class="mb-3">
+                        <label class="form-label">@Loc.T("Nome completo", "Full name")</label>
+                        <InputText @bind-Value="form.FullName" class="form-control" />
+                        <ValidationMessage For="() => form.FullName" class="text-danger small" />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">@Loc.T("E-mail", "Email")</label>
+                        <InputText @bind-Value="form.Email" class="form-control" />
+                        <ValidationMessage For="() => form.Email" class="text-danger small" />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">@Loc.T("Senha", "Password")</label>
+                        <InputText type="password" @bind-Value="form.Password" class="form-control" />
+                        <ValidationMessage For="() => form.Password" class="text-danger small" />
+                        <div class="form-text">@Loc.T("Mínimo 12 caracteres, com maiúscula, minúscula, dígito e símbolo.", "At least 12 characters, with uppercase, lowercase, digit and symbol.")</div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">@Loc.T("Perfil", "Role")</label>
+                        <InputSelect @bind-Value="form.Role" class="form-select">
+                            @foreach (var r in Roles.All)
+                            {
+                                <option value="@r">@Labels.Role(r)</option>
+                            }
+                        </InputSelect>
+                    </div>
+                    <button type="submit" class="btn btn-primary" disabled="@busy">@Loc.T("Criar", "Create")</button>
+                </EditForm>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-7">
+        @if (loading)
+        {
+            <p class="text-muted">@Loc.T("Carregando...", "Loading...")</p>
+        }
+        else
+        {
+            <div class="card"><div class="table-responsive">
+            <table class="table align-middle mb-0">
+                <thead><tr><th>@Loc.T("Nome", "Name")</th><th>@Loc.T("E-mail", "Email")</th><th>@Loc.T("Perfil", "Role")</th><th>@Loc.T("Situação", "Status")</th><th></th></tr></thead>
+                <tbody>
+                    @foreach (var u in users)
+                    {
+                        <tr>
+                            <td>@u.FullName</td>
+                            <td>@u.Email</td>
+                            <td>
+                                <select class="form-select form-select-sm" value="@u.Roles.FirstOrDefault()"
+                                        @onchange="e => ChangeRole(u, e.Value?.ToString())" disabled="@busy">
+                                    @foreach (var r in Roles.All)
+                                    {
+                                        <option value="@r" selected="@(u.Roles.Contains(r))">@Labels.Role(r)</option>
+                                    }
+                                </select>
+                            </td>
+                            <td>
+                                <span class="dc-badge @(u.IsActive ? "dc-badge--green" : "dc-badge--muted")">
+                                    @(u.IsActive ? Loc.T("Ativo", "Active") : Loc.T("Inativo", "Inactive"))
+                                </span>
+                            </td>
+                            <td class="text-end text-nowrap">
+                                <button class="btn btn-outline-secondary btn-sm me-1" @onclick="() => OpenPasswordReset(u)" disabled="@busy">@Loc.T("Senha", "Password")</button>
+                                @if (u.IsActive)
+                                {
+                                    <button class="btn btn-outline-warning btn-sm" @onclick="() => Toggle(u, false)" disabled="@busy">@Loc.T("Desativar", "Deactivate")</button>
+                                }
+                                else
+                                {
+                                    <button class="btn btn-outline-success btn-sm" @onclick="() => Toggle(u, true)" disabled="@busy">@Loc.T("Ativar", "Activate")</button>
+                                }
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+            </div></div>
+        }
+    </div>
+</div>
+
+@code {
+    private IReadOnlyList<UserResponse> users = [];
+    private UserForm form = new();
+    private bool loading = true;
+    private bool busy;
+    private string? error;
+
+    // Estado do painel de redefinição de senha (modo privado: o Admin define a senha).
+    private string? pwUserId;
+    private string? pwUserName;
+    private string pwValue = "";
+    private string pwConfirm = "";
+    private string? pwError;
+
+    protected override Task OnInitializedAsync() => LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        loading = true;
+        try { users = (await Api.ListUsersAsync(1, 100)).Items; }
+        catch (ApiException ex) { error = ex.Message; }
+        finally { loading = false; }
+    }
+
+    private async Task CreateAsync()
+    {
+        busy = true;
+        error = null;
+        try
+        {
+            await Api.CreateUserAsync(new CreateUserRequest
+            {
+                FullName = form.FullName,
+                Email = form.Email,
+                Password = form.Password,
+                Role = form.Role
+            });
+            form = new UserForm();
+            await LoadAsync();
+        }
+        catch (ApiException ex) { error = ex.Message; }
+        finally { busy = false; }
+    }
+
+    private async Task ChangeRole(UserResponse user, string? role)
+    {
+        if (string.IsNullOrEmpty(role) || user.Roles.Contains(role) && user.Roles.Count == 1) return;
+        busy = true;
+        error = null;
+        try
+        {
+            await Api.SetUserRolesAsync(user.Id, new SetRolesRequest { Roles = [role] });
+            await LoadAsync();
+        }
+        catch (ApiException ex) { error = ex.Message; }
+        finally { busy = false; }
+    }
+
+    private async Task Toggle(UserResponse user, bool active)
+    {
+        busy = true;
+        error = null;
+        try
+        {
+            if (active) await Api.ActivateUserAsync(user.Id);
+            else await Api.DeactivateUserAsync(user.Id);
+            await LoadAsync();
+        }
+        catch (ApiException ex) { error = ex.Message; }
+        finally { busy = false; }
+    }
+
+    private void OpenPasswordReset(UserResponse user)
+    {
+        pwUserId = user.Id;
+        pwUserName = user.FullName;
+        pwValue = "";
+        pwConfirm = "";
+        pwError = null;
+        error = null;
+    }
+
+    private void CancelPasswordReset()
+    {
+        pwUserId = null;
+        pwUserName = null;
+        pwValue = "";
+        pwConfirm = "";
+        pwError = null;
+    }
+
+    private async Task SavePasswordAsync()
+    {
+        pwError = null;
+        if (pwValue != pwConfirm)
+        {
+            pwError = Loc.T("As senhas não coincidem.", "The passwords don't match.");
+            return;
+        }
+
+        busy = true;
+        try
+        {
+            await Api.SetUserPasswordAsync(pwUserId!, new SetUserPasswordRequest { Password = pwValue });
+            CancelPasswordReset();
+        }
+        catch (ApiException ex) { pwError = ex.Message; }
+        finally { busy = false; }
+    }
+
+    public sealed class UserForm
+    {
+        [LocRequired("Informe o nome.", "Name is required.")]
+        public string FullName { get; set; } = "";
+        [LocRequired("Informe o e-mail.", "Email is required."), LocEmailAddress("E-mail inválido.", "Invalid email.")]
+        public string Email { get; set; } = "";
+        [LocRequired("Informe a senha.", "Password is required.")]
+        public string Password { get; set; } = "";
+        public string Role { get; set; } = Roles.User;
+    }
+}

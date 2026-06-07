@@ -1,0 +1,63 @@
+## .NET / build output
+bin/
+obj/
+[Dd]ebug/
+[Rr]elease/
+x64/
+x86/
+[Aa][Rr][Mm]/
+[Aa][Rr][Mm]64/
+build/
+publish/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+## Rider / VS / VS Code
+.vs/
+.idea/
+*.DotSettings.user
+
+## .NET tooling
+project.lock.json
+project.fragment.lock.json
+artifacts/
+
+## Test results
+[Tt]est[Rr]esult*/
+coverage*.json
+coverage*.xml
+coverage*.info
+
+## Secrets / config sensível (fora do repositório)
+.env
+.env.*
+!.env.example
+*.pfx
+*.key
+appsettings.*.local.json
+*.local.md
+
+## Dados locais / uploads
+data/
+docker/postgres/data/
+
+## Certificados TLS do Nginx (gerados; só o .gitkeep é versionado)
+docker/nginx/certs/*.pem
+
+## Runtime gerado em dev (DataProtection keys, uploads)
+dp-keys/
+dp-keys-dev/
+uploads/
+uploads-dev/
+**/dp-keys-dev/
+**/uploads-dev/
+
+## Logs
+logs/
+*.log
+
+## SO
+Thumbs.db
+.DS_Store

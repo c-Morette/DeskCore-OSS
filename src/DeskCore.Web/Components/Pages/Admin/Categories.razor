@@ -1,0 +1,153 @@
+@page "/admin/categorias"
+@attribute [Authorize(Roles = Roles.Admin)]
+@inject DeskCoreApiClient Api
+
+<PageTitle>@Loc.T("Categorias", "Categories") — DeskCore</PageTitle>
+
+<div class="dc-page-head">
+    <div>
+        <h1 class="dc-page-title">@Loc.T("CATEGORIAS", "CATEGORIES")<span class="dc-cursor">_</span></h1>
+        <div class="dc-page-subtitle">@Loc.T("Gerencie as categorias de tickets", "Manage ticket categories")</div>
+    </div>
+</div>
+
+@if (error is not null)
+{
+    <div class="alert alert-danger">@error</div>
+}
+
+<div class="row g-4">
+    <div class="col-lg-5">
+        <div class="card">
+            <div class="card-header">@(editingId is null ? Loc.T("Nova categoria", "New category") : Loc.T("Editar categoria", "Edit category"))</div>
+            <div class="card-body">
+                <EditForm Model="form" OnValidSubmit="SaveAsync">
+                    <DataAnnotationsValidator />
+                    <div class="mb-3">
+                        <label class="form-label">@Loc.T("Nome", "Name")</label>
+                        <InputText @bind-Value="form.Name" class="form-control" />
+                        <ValidationMessage For="() => form.Name" class="text-danger small" />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">@Loc.T("Descrição", "Description")</label>
+                        <InputTextArea @bind-Value="form.Description" class="form-control" rows="2" />
+                    </div>
+                    <button type="submit" class="btn btn-primary" disabled="@busy">@Loc.T("Salvar", "Save")</button>
+                    @if (editingId is not null)
+                    {
+                        <button type="button" class="btn btn-link" @onclick="CancelEdit">@Loc.T("Cancelar", "Cancel")</button>
+                    }
+                </EditForm>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-7">
+        @if (loading)
+        {
+            <p class="text-muted">@Loc.T("Carregando...", "Loading...")</p>
+        }
+        else
+        {
+            <div class="card"><div class="table-responsive">
+            <table class="table align-middle mb-0">
+                <thead><tr><th>@Loc.T("Nome", "Name")</th><th>@Loc.T("Situação", "Status")</th><th class="text-end">@Loc.T("Ações", "Actions")</th></tr></thead>
+                <tbody>
+                    @foreach (var c in categories)
+                    {
+                        <tr>
+                            <td>@c.Name</td>
+                            <td>
+                                <span class="dc-badge @(c.IsActive ? "dc-badge--green" : "dc-badge--muted")">
+                                    @(c.IsActive ? Loc.T("Ativa", "Active") : Loc.T("Inativa", "Inactive"))
+                                </span>
+                            </td>
+                            <td class="text-end">
+                                <button class="btn btn-outline-secondary btn-sm" @onclick="() => StartEdit(c)" disabled="@busy">@Loc.T("Editar", "Edit")</button>
+                                @if (c.IsActive)
+                                {
+                                    <button class="btn btn-outline-warning btn-sm" @onclick="() => Toggle(c, false)" disabled="@busy">@Loc.T("Desativar", "Deactivate")</button>
+                                }
+                                else
+                                {
+                                    <button class="btn btn-outline-success btn-sm" @onclick="() => Toggle(c, true)" disabled="@busy">@Loc.T("Ativar", "Activate")</button>
+                                }
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+            </div></div>
+        }
+    </div>
+</div>
+
+@code {
+    private IReadOnlyList<CategoryResponse> categories = [];
+    private CategoryForm form = new();
+    private long? editingId;
+    private bool loading = true;
+    private bool busy;
+    private string? error;
+
+    protected override Task OnInitializedAsync() => LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        loading = true;
+        try { categories = await Api.ListCategoriesAsync(all: true); }
+        catch (ApiException ex) { error = ex.Message; }
+        finally { loading = false; }
+    }
+
+    private void StartEdit(CategoryResponse c)
+    {
+        editingId = c.Id;
+        form = new CategoryForm { Name = c.Name, Description = c.Description };
+    }
+
+    private void CancelEdit()
+    {
+        editingId = null;
+        form = new CategoryForm();
+    }
+
+    private async Task SaveAsync()
+    {
+        busy = true;
+        error = null;
+        try
+        {
+            if (editingId is null)
+                await Api.CreateCategoryAsync(new CreateCategoryRequest { Name = form.Name, Description = form.Description });
+            else
+                await Api.UpdateCategoryAsync(editingId.Value, new UpdateCategoryRequest { Name = form.Name, Description = form.Description });
+
+            CancelEdit();
+            await LoadAsync();
+        }
+        catch (ApiException ex) { error = ex.Message; }
+        finally { busy = false; }
+    }
+
+    private async Task Toggle(CategoryResponse c, bool active)
+    {
+        busy = true;
+        error = null;
+        try
+        {
+            if (active) await Api.ActivateCategoryAsync(c.Id);
+            else await Api.DeactivateCategoryAsync(c.Id);
+            await LoadAsync();
+        }
+        catch (ApiException ex) { error = ex.Message; }
+        finally { busy = false; }
+    }
+
+    public sealed class CategoryForm
+    {
+        [LocRequired("Informe o nome.", "Name is required.")]
+        public string Name { get; set; } = "";
+        public string? Description { get; set; }
+    }
+}

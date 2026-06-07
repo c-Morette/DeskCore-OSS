@@ -1,0 +1,74 @@
+@page "/redefinir-senha"
+@layout EmptyLayout
+@attribute [AllowAnonymous]
+@using Microsoft.Extensions.Configuration
+@inject IConfiguration Config
+
+<PageTitle>@Loc.T("Redefinir senha", "Reset password") — DeskCore</PageTitle>
+
+<div class="card">
+    <div class="card-body p-4">
+        <div class="text-center mb-4">
+            <div class="dc-login-brand"><span class="dc-login-mark">◆</span> DESK<span class="dc-login-accent">CORE</span></div>
+            <div class="dc-login-sub">@Loc.T("Defina uma nova senha", "Set a new password")</div>
+        </div>
+
+        @if (!SelfServiceEnabled)
+        {
+            <div class="alert alert-warning py-2">@Loc.T("A recuperação de senha está desabilitada nesta instância. Solicite ao administrador.", "Password recovery is disabled on this instance. Please contact the administrator.")</div>
+            <a class="btn btn-outline-secondary w-100" href="/login" data-enhance-nav="false">@Loc.T("Voltar ao login", "Back to sign in")</a>
+        }
+        else if (Invalid)
+        {
+            <div class="alert alert-danger py-2">@Loc.T("Link inválido. Solicite uma nova redefinição.", "Invalid link. Please request a new reset.")</div>
+            <a class="btn btn-outline-secondary w-100" href="/esqueci-senha" data-enhance-nav="false">@Loc.T("Solicitar novo link", "Request a new link")</a>
+        }
+        else
+        {
+            @if (HasError)
+            {
+                <div class="alert alert-danger py-2">
+                    @if (Error == "mismatch")
+                    {
+                        @Loc.T("As senhas não coincidem.", "The passwords don't match.")
+                    }
+                    else if (!string.IsNullOrEmpty(Message))
+                    {
+                        @Message
+                    }
+                    else
+                    {
+                        @Loc.T("Não foi possível redefinir a senha. O link pode ter expirado.", "Could not reset the password. The link may have expired.")
+                    }
+                </div>
+            }
+
+            <form action="/account/reset-password" method="post">
+                <AntiforgeryToken />
+                <input type="hidden" name="userId" value="@UserId" />
+                <input type="hidden" name="token" value="@Token" />
+                <div class="mb-3">
+                    <label class="form-label">@Loc.T("Nova senha", "New password")</label>
+                    <input name="password" type="password" class="form-control" autocomplete="new-password" minlength="12" required />
+                    <div class="form-text">@Loc.T("Mínimo de 12 caracteres, com maiúscula, minúscula, número e símbolo.", "At least 12 characters, with upper- and lowercase, a number and a symbol.")</div>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">@Loc.T("Confirmar nova senha", "Confirm new password")</label>
+                    <input name="confirmPassword" type="password" class="form-control" autocomplete="new-password" minlength="12" required />
+                </div>
+                <button type="submit" class="btn btn-primary w-100">@Loc.T("Redefinir senha", "Reset password")</button>
+            </form>
+        }
+    </div>
+</div>
+
+@code {
+    [SupplyParameterFromQuery(Name = "userId")] private string? UserId { get; set; }
+    [SupplyParameterFromQuery(Name = "token")] private string? Token { get; set; }
+    [SupplyParameterFromQuery(Name = "error")] private string? Error { get; set; }
+    [SupplyParameterFromQuery(Name = "msg")] private string? Message { get; set; }
+
+    private bool Invalid => string.IsNullOrWhiteSpace(UserId) || string.IsNullOrWhiteSpace(Token);
+    private bool HasError => !string.IsNullOrEmpty(Error);
+    private bool SelfServiceEnabled => Config.GetValue("SelfService:Enabled", true);
+}

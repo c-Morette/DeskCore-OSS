@@ -1,0 +1,43 @@
+@namespace DeskCore.Web.Components.Charts
+@using System.Globalization
+
+<div class="dc-colchart">
+    <svg viewBox="0 0 @F(Width) @F(Height)" preserveAspectRatio="none" width="100%" height="120"
+         role="img" aria-label="@AriaLabel">
+        @{
+            var n = Data.Count;
+            var max = n > 0 ? Math.Max(1L, Data.Max(d => d.Count)) : 1L;
+            const double gap = 1.5;
+            var colW = n > 0 ? (Width - gap * (n - 1)) / n : Width;
+        }
+        @for (var i = 0; i < n; i++)
+        {
+            var d = Data[i];
+            var h = d.Count > 0 ? Math.Max(d.Count / (double)max * Height, 1.5) : 0;
+            var x = i * (colW + gap);
+            var y = Height - h;
+            <rect x="@F(x)" y="@F(y)" width="@F(colW)" height="@F(h)"
+                  class="dc-col @(d.Count > 0 ? "dc-col--on" : "dc-col--off")">
+                <title>@d.Date.ToString("dd/MM") — @d.Count</title>
+            </rect>
+        }
+    </svg>
+    @if (Data.Count > 0)
+    {
+        <div class="dc-colchart-axis">
+            <span>@Data[0].Date.ToString("dd/MM")</span>
+            <span>@Data[^1].Date.ToString("dd/MM")</span>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter] public IReadOnlyList<DailyCount> Data { get; set; } = [];
+    [Parameter] public string AriaLabel { get; set; } = "";
+
+    private const double Width = 300;
+    private const double Height = 80;
+
+    // SVG exige ponto decimal — formata sempre com cultura invariante (pt-BR usaria vírgula).
+    private static string F(double v) => v.ToString("0.##", CultureInfo.InvariantCulture);
+}

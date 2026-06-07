@@ -1,0 +1,199 @@
+@page "/tickets"
+@attribute [Authorize]
+@inject DeskCoreApiClient Api
+@inject NavigationManager Nav
+
+<PageTitle>Tickets — DeskCore</PageTitle>
+
+<div class="dc-page-head">
+    <div>
+        <h1 class="dc-page-title">@(isStaff ? "TICKETS" : Loc.T("MEUS TICKETS", "MY TICKETS"))<span class="dc-cursor">_</span></h1>
+        <div class="dc-page-subtitle">@(isStaff ? Loc.T("Todos os chamados do sistema", "All tickets in the system") : Loc.T("Os chamados que você abriu", "The tickets you opened"))</div>
+    </div>
+    <a class="btn btn-primary" href="/tickets/novo">+ @Loc.T("Novo ticket", "New ticket")</a>
+</div>
+
+<div class="card mb-3">
+    <div class="card-body dc-filters">
+        <div class="row g-2">
+            <div class="col-6 col-md-2">
+                <input class="form-control form-control-sm" placeholder="@Loc.T("Nº (TK-…)", "No. (TK-…)")" @bind="numberFilter" @bind:after="ReloadAsync" />
+            </div>
+            <div class="col-6 col-md-3">
+                <input class="form-control form-control-sm" placeholder="@Loc.T("Nome (título)", "Name (title)")" @bind="titleFilter" @bind:after="ReloadAsync" />
+            </div>
+            <div class="col-6 col-md-3">
+                <input class="form-control form-control-sm" placeholder="@Loc.T("Assunto (descrição)", "Subject (description)")" @bind="descriptionFilter" @bind:after="ReloadAsync" />
+            </div>
+            @if (isStaff)
+            {
+                <div class="col-6 col-md-2">
+                    <input class="form-control form-control-sm" placeholder="@Loc.T("Solicitante", "Requester")" @bind="requesterFilter" @bind:after="ReloadAsync" />
+                </div>
+            }
+            <div class="col-6 col-md-2">
+                <select class="form-select form-select-sm" @bind="statusFilter" @bind:after="ReloadAsync">
+                    <option value="">@Loc.T("Todos os status", "All statuses")</option>
+                    @foreach (var s in Enum.GetValues<TicketStatus>())
+                    {
+                        <option value="@s">@Labels.Status(s)</option>
+                    }
+                </select>
+            </div>
+        </div>
+        <div class="d-flex justify-content-between align-items-center mt-2">
+            <div class="form-check">
+                <input class="form-check-input" type="checkbox" id="unseenOnly" @bind="unseenOnly" @bind:after="ReloadAsync" />
+                <label class="form-check-label small" for="unseenOnly">@Loc.T("Só atualizados", "Updated only")</label>
+            </div>
+            @if (HasAnyFilter)
+            {
+                <button class="btn btn-link btn-sm dc-clear-filters p-0" @onclick="ClearFiltersAsync">@Loc.T("Limpar filtros", "Clear filters")</button>
+            }
+        </div>
+    </div>
+</div>
+
+@if (loading)
+{
+    <p class="text-muted">@Loc.T("Carregando...", "Loading...")</p>
+}
+else if (error is not null)
+{
+    <div class="alert alert-danger">@error</div>
+}
+else if (result is null || result.Items.Count == 0)
+{
+    <div class="alert alert-info">@Loc.T("Nenhum ticket encontrado.", "No tickets found.")</div>
+}
+else
+{
+    <div class="card mb-3">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead>
+                    <tr>
+                        <th>@Loc.T("Número", "Number")</th><th>@Loc.T("Título", "Title")</th>
+                        @if (isStaff) { <th>@Loc.T("Solicitante", "Requester")</th> }
+                        <th>Status</th><th>@Loc.T("Prioridade", "Priority")</th>
+                        <th>@Loc.T("Categoria", "Category")</th><th>@Loc.T("Responsável", "Assignee")</th><th class="text-nowrap">@Loc.T("Criado em", "Created")</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var t in result.Items)
+                    {
+                        <tr role="button" @onclick="() => Open(t.Id)" class="@(t.HasUnseenActivity ? "dc-row-unseen" : "")">
+                            <td class="text-nowrap dc-mono-gold">
+                                @if (t.HasUnseenActivity)
+                                {
+                                    <span class="dc-unseen-dot" title="@Loc.T("Atualizado — há novidade", "Updated — new activity")"></span>
+                                }
+                                @t.Number
+                            </td>
+                            <td class="@(t.HasUnseenActivity ? "fw-semibold" : "")">@t.Title</td>
+                            @if (isStaff) { <td>@(t.CreatedByName ?? "—")</td> }
+                            <td><span class="@Labels.StatusBadge(t.Status)">@Labels.Status(t.Status)</span></td>
+                            <td><span class="@Labels.PriorityBadge(t.Priority)">@Labels.Priority(t.Priority)</span></td>
+                            <td>@t.CategoryName</td>
+                            <td>@(t.AssignedToName ?? "—")</td>
+                            <td class="text-nowrap text-muted">@t.CreatedAt.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="d-flex justify-content-between align-items-center">
+        <small class="text-muted">@result.TotalCount ticket(s)</small>
+        <div class="btn-group">
+            <button class="btn btn-outline-secondary btn-sm" disabled="@(page <= 1)" @onclick="Prev">@Loc.T("Anterior", "Previous")</button>
+            <span class="btn btn-outline-secondary btn-sm disabled">@(page) / @Math.Max(1, result.TotalPages)</span>
+            <button class="btn btn-outline-secondary btn-sm" disabled="@(page >= result.TotalPages)" @onclick="Next">@Loc.T("Próxima", "Next")</button>
+        </div>
+    </div>
+}
+
+@code {
+    [SupplyParameterFromQuery] public string? Status { get; set; }
+    [CascadingParameter] private Task<AuthenticationState>? AuthState { get; set; }
+
+    private bool isStaff;
+    private string statusFilter = "";
+    private string numberFilter = "";
+    private string titleFilter = "";
+    private string descriptionFilter = "";
+    private string requesterFilter = "";
+    private bool unseenOnly;
+
+    private int page = 1;
+    private const int PageSize = 20;
+    private bool loading = true;
+    private string? error;
+    private PagedResult<TicketListItemResponse>? result;
+
+    private bool HasAnyFilter =>
+        !string.IsNullOrEmpty(statusFilter) || !string.IsNullOrWhiteSpace(numberFilter) ||
+        !string.IsNullOrWhiteSpace(titleFilter) || !string.IsNullOrWhiteSpace(descriptionFilter) ||
+        !string.IsNullOrWhiteSpace(requesterFilter);
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (AuthState is not null)
+        {
+            var user = (await AuthState).User;
+            isStaff = user.IsInRole(Roles.Agent) || user.IsInRole(Roles.Admin);
+        }
+
+        if (!string.IsNullOrEmpty(Status))
+            statusFilter = Status;
+
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        loading = true;
+        error = null;
+        try
+        {
+            TicketStatus? status = Enum.TryParse<TicketStatus>(statusFilter, out var s) ? s : null;
+            result = await Api.ListTicketsAsync(
+                status, page, PageSize,
+                numberFilter, titleFilter, descriptionFilter, isStaff ? requesterFilter : null, unseenOnly);
+        }
+        catch (ApiException ex)
+        {
+            error = ex.Message;
+        }
+        finally
+        {
+            loading = false;
+        }
+    }
+
+    private async Task ReloadAsync()
+    {
+        page = 1;
+        await LoadAsync();
+    }
+
+    private async Task ClearFiltersAsync()
+    {
+        statusFilter = numberFilter = titleFilter = descriptionFilter = requesterFilter = "";
+        unseenOnly = false;
+        await ReloadAsync();
+    }
+
+    private async Task Prev()
+    {
+        if (page > 1) { page--; await LoadAsync(); }
+    }
+
+    private async Task Next()
+    {
+        if (result is not null && page < result.TotalPages) { page++; await LoadAsync(); }
+    }
+
+    private void Open(long id) => Nav.NavigateTo($"/tickets/{id}");
+}

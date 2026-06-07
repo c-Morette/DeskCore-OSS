@@ -1,0 +1,99 @@
+@page "/tickets/novo"
+@attribute [Authorize]
+@inject DeskCoreApiClient Api
+@inject NavigationManager Nav
+
+<PageTitle>@Loc.T("Novo ticket", "New ticket") — DeskCore</PageTitle>
+
+<div class="dc-page-head">
+    <div>
+        <h1 class="dc-page-title">@Loc.T("NOVO TICKET", "NEW TICKET")<span class="dc-cursor">_</span></h1>
+        <div class="dc-page-subtitle">@Loc.T("Abra um novo chamado", "Open a new ticket")</div>
+    </div>
+</div>
+
+@if (error is not null)
+{
+    <div class="alert alert-danger">@error</div>
+}
+
+<div class="row">
+    <div class="col-lg-8">
+        <div class="card"><div class="card-body p-4">
+        <EditForm Model="model" OnValidSubmit="SubmitAsync">
+            <DataAnnotationsValidator />
+            <div class="mb-3">
+                <label class="form-label">@Loc.T("Título", "Title")</label>
+                <InputText @bind-Value="model.Title" class="form-control" />
+                <ValidationMessage For="() => model.Title" class="text-danger small" />
+            </div>
+            <div class="mb-3">
+                <label class="form-label">@Loc.T("Descrição", "Description")</label>
+                <InputTextArea @bind-Value="model.Description" class="form-control" rows="6" />
+                <ValidationMessage For="() => model.Description" class="text-danger small" />
+            </div>
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label class="form-label">@Loc.T("Prioridade", "Priority")</label>
+                    <InputSelect @bind-Value="model.Priority" class="form-select">
+                        @foreach (var p in Enum.GetValues<TicketPriority>())
+                        {
+                            <option value="@p">@Labels.Priority(p)</option>
+                        }
+                    </InputSelect>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">@Loc.T("Categoria", "Category")</label>
+                    <InputSelect @bind-Value="model.CategoryId" class="form-select">
+                        <option value="0">@Loc.T("Selecione...", "Select...")</option>
+                        @foreach (var c in categories)
+                        {
+                            <option value="@c.Id">@c.Name</option>
+                        }
+                    </InputSelect>
+                    <ValidationMessage For="() => model.CategoryId" class="text-danger small" />
+                </div>
+            </div>
+            <div class="mt-4">
+                <button type="submit" class="btn btn-primary" disabled="@saving">@Loc.T("Criar", "Create")</button>
+                <a class="btn btn-outline-secondary ms-2" href="/tickets">@Loc.T("Cancelar", "Cancel")</a>
+            </div>
+        </EditForm>
+        </div></div>
+    </div>
+</div>
+
+@code {
+    private readonly CreateTicketRequest model = new() { Priority = TicketPriority.Medium };
+    private IReadOnlyList<CategoryResponse> categories = [];
+    private bool saving;
+    private string? error;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            categories = await Api.ListCategoriesAsync(all: false);
+        }
+        catch (ApiException ex)
+        {
+            error = ex.Message;
+        }
+    }
+
+    private async Task SubmitAsync()
+    {
+        saving = true;
+        error = null;
+        try
+        {
+            var created = await Api.CreateTicketAsync(model);
+            Nav.NavigateTo($"/tickets/{created.Id}");
+        }
+        catch (ApiException ex)
+        {
+            error = ex.Message;
+            saving = false;
+        }
+    }
+}

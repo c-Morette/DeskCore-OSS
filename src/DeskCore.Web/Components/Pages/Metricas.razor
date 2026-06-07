@@ -1,0 +1,189 @@
+@page "/metricas"
+@attribute [Authorize]
+@inject DeskCoreApiClient Api
+
+<PageTitle>@Loc.T("Métricas", "Metrics") — DeskCore</PageTitle>
+
+<div class="dc-page-head">
+    <div>
+        <h1 class="dc-page-title">@Loc.T("MÉTRICAS", "METRICS")<span class="dc-cursor">_</span></h1>
+        <div class="dc-page-subtitle">@Loc.T("Indicadores e tendências do atendimento", "Support indicators and trends")</div>
+    </div>
+    <a class="btn btn-outline-secondary" href="/">← @Loc.T("Painel", "Dashboard")</a>
+</div>
+
+@if (loading)
+{
+    <p class="text-muted">@Loc.T("Carregando...", "Loading...")</p>
+}
+else if (error is not null)
+{
+    <div class="alert alert-danger">@error</div>
+}
+else if (data is not null)
+{
+    <div class="row g-3 mb-4">
+        <div class="col-6 col-xl">
+            <div class="dc-kpi">
+                <div class="dc-kpi-label">@Loc.T("Total de tickets", "Total tickets")</div>
+                <div class="dc-kpi-value">@data.TotalTickets</div>
+            </div>
+        </div>
+        <div class="col-6 col-xl">
+            <div class="dc-kpi">
+                <div class="dc-kpi-label">@Loc.T("Em aberto", "Open")</div>
+                <div class="dc-kpi-value dc-kpi-value--gold">@data.OpenTickets</div>
+            </div>
+        </div>
+        <div class="col-6 col-xl">
+            <div class="dc-kpi">
+                <div class="dc-kpi-label">@Loc.T("Criados (30d)", "Created (30d)")</div>
+                <div class="dc-kpi-value">@data.CreatedLast30Days</div>
+            </div>
+        </div>
+        <div class="col-6 col-xl">
+            <div class="dc-kpi">
+                <div class="dc-kpi-label">@Loc.T("Tempo médio de resolução", "Avg. resolution time")</div>
+                <div class="dc-kpi-value dc-kpi-value--teal">@AvgResolutionText()</div>
+            </div>
+        </div>
+        <div class="col-6 col-xl">
+            <div class="dc-kpi">
+                <div class="dc-kpi-label">@Loc.T("Taxa de resolução", "Resolution rate")</div>
+                <div class="dc-kpi-value dc-kpi-value--green">@ResolutionRateText()</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card mb-4">
+        <div class="card-header">@Loc.T("Tickets por dia (últimos 30 dias)", "Tickets per day (last 30 days)")</div>
+        <div class="card-body">
+            <DcColumnChart Data="data.TicketsPerDay" AriaLabel="@Loc.T("Tickets criados por dia", "Tickets created per day")" />
+        </div>
+    </div>
+
+    <div class="row g-3 mb-4">
+        <div class="col-lg-6">
+            <div class="card h-100">
+                <div class="card-header">@Loc.T("Por status", "By status")</div>
+                <div class="card-body">
+                    <DcBarChart Items="StatusBars()" EmptyText="@NoData" />
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-6">
+            <div class="card h-100">
+                <div class="card-header">@Loc.T("Por prioridade", "By priority")</div>
+                <div class="card-body">
+                    <DcBarChart Items="PriorityBars()" EmptyText="@NoData" />
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-3">
+        <div class="col-lg-6">
+            <div class="card h-100">
+                <div class="card-header">@Loc.T("Por categoria", "By category")</div>
+                <div class="card-body">
+                    <DcBarChart Items="CategoryBars()" EmptyText="@NoData" />
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-6">
+            <div class="card h-100">
+                <div class="card-header dc-card-header-row">
+                    <span>@Loc.T("Por atendente", "By agent")</span>
+                    <span class="text-muted small">@Loc.T("atribuídos", "assigned")</span>
+                </div>
+                <div class="card-body">
+                    <DcBarChart Items="AgentBars()" EmptyText="@Loc.T("Nenhum ticket atribuído.", "No assigned tickets.")" />
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [CascadingParameter] private Task<AuthenticationState>? AuthState { get; set; }
+    [Inject] private NavigationManager Nav { get; set; } = default!;
+
+    private bool loading = true;
+    private string? error;
+    private MetricsOverviewResponse? data;
+
+    private string NoData => Loc.T("Sem dados.", "No data.");
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Área de atendimento/admin. Cliente (User) cai nos próprios tickets.
+        if (AuthState is not null)
+        {
+            var user = (await AuthState).User;
+            if (!(user.IsInRole(Roles.Agent) || user.IsInRole(Roles.Admin)))
+            {
+                Nav.NavigateTo("/tickets", replace: true);
+                return;
+            }
+        }
+
+        try
+        {
+            data = await Api.GetMetricsOverviewAsync();
+        }
+        catch (ApiException ex)
+        {
+            error = ex.Message;
+        }
+        finally
+        {
+            loading = false;
+        }
+    }
+
+    private List<ChartBar> StatusBars() => data!.ByStatus
+        .Select(s => new ChartBar(Labels.Status(Enum.Parse<TicketStatus>(s.Key)), s.Count, StatusColor(s.Key)))
+        .ToList();
+
+    private List<ChartBar> PriorityBars() => data!.ByPriority
+        .Select(p => new ChartBar(Labels.Priority(Enum.Parse<TicketPriority>(p.Key)), p.Count, PriorityColor(p.Key)))
+        .ToList();
+
+    private List<ChartBar> CategoryBars() => data!.ByCategory
+        .Select(c => new ChartBar(c.Label, c.Count, "gold"))
+        .ToList();
+
+    private List<ChartBar> AgentBars() => data!.ByAgent
+        .Select(a => new ChartBar(a.Label, a.Count, "blue"))
+        .ToList();
+
+    private string AvgResolutionText()
+    {
+        if (data!.AvgResolutionHours is not { } h) return "—";
+        if (h < 1) return $"{Math.Round(h * 60)} min";
+        if (h < 48) return Loc.T($"{h:0.#} h", $"{h:0.#} h");
+        return Loc.T($"{h / 24:0.#} d", $"{h / 24:0.#} d");
+    }
+
+    private string ResolutionRateText() => $"{Math.Round(data!.ResolutionRate * 100)}%";
+
+    private static string StatusColor(string key) => key switch
+    {
+        "WaitingAgent" => "gold",
+        "InProgress" => "green",
+        "WaitingUser" => "blue",
+        "Resolved" => "teal",
+        "Closed" => "muted",
+        "Canceled" => "red",
+        _ => "muted"
+    };
+
+    private static string PriorityColor(string key) => key switch
+    {
+        "Low" => "muted",
+        "Medium" => "blue",
+        "High" => "orange",
+        "Critical" => "red",
+        _ => "muted"
+    };
+}

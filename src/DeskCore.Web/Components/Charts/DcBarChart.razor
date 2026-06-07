@@ -1,0 +1,38 @@
+@namespace DeskCore.Web.Components.Charts
+
+@if (Items is null || Items.Count == 0)
+{
+    <p class="text-muted small m-0 p-3">@EmptyText</p>
+}
+else
+{
+    <div class="dc-barchart">
+        @foreach (var item in Items)
+        {
+            <div class="dc-bar-row">
+                <div class="dc-bar-head">
+                    <span class="dc-bar-label" title="@item.Label">@item.Label</span>
+                    <span class="dc-bar-value">@item.Count</span>
+                </div>
+                <div class="dc-bar-track">
+                    <div class="dc-bar-fill dc-bar-fill--@item.Color" style="width:@Percent(item.Count)%"></div>
+                </div>
+            </div>
+        }
+    </div>
+}
+
+@code {
+    [Parameter] public IReadOnlyList<ChartBar>? Items { get; set; }
+    [Parameter] public string EmptyText { get; set; } = "—";
+
+    private long Max => Items is { Count: > 0 } ? Items.Max(i => i.Count) : 0;
+
+    // Largura proporcional ao maior valor; garante um mínimo visível quando há contagem.
+    private int Percent(long count)
+    {
+        if (Max <= 0) return 0;
+        var pct = (int)Math.Round(count * 100.0 / Max);
+        return count > 0 ? Math.Max(pct, 4) : 0;
+    }
+}

@@ -1,0 +1,39 @@
+# Build output
+**/bin/
+**/obj/
+**/publish/
+artifacts/
+
+# IDE
+.vs/
+.idea/
+**/*.user
+
+# Git
+.git/
+.gitignore
+
+# Dados locais / runtime (nunca vão para a imagem)
+data/
+docker/postgres/data/
+docker/nginx/certs/*.pem
+uploads/
+uploads-dev/
+dp-keys/
+dp-keys-dev/
+**/uploads-dev/
+**/dp-keys-dev/
+logs/
+*.log
+
+# Segredos
+.env
+.env.*
+!.env.example
+*.pfx
+*.key
+
+# Docs / misc não necessários no build
+docs/
+README.md
+*.md

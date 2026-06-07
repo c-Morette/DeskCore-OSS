@@ -1,0 +1,3 @@
+# Os certificados TLS ficam aqui (fullchain.pem / privkey.pem) e NÃO são versionados.
+# Local: gere self-signed com ../generate-dev-certs.ps1
+# VM:   copie/symlinke os certificados do Let's Encrypt (ver README, seção Deploy).

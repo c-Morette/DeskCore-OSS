@@ -1,0 +1,7 @@
+# Override aplicado automaticamente em desenvolvimento local (docker compose up).
+# Conveniências de dev — NÃO usar na VM (lá: docker compose -f docker-compose.yml up -d).
+services:
+  deskcore-postgres:
+    # Expõe o Postgres no host (porta 5433, pois a 5432 local costuma estar ocupada).
+    ports:
+      - "5433:5432"

@@ -1,0 +1,37 @@
+/* Estilos base do app. A identidade visual (paleta dourada, fonte mono,
+   componentes) vive em css/deskcore-theme.css, carregado depois deste. */
+
+html, body {
+    font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+
+.content {
+    padding-top: 1.1rem;
+}
+
+h1:focus {
+    outline: none;
+}
+
+.valid.modified:not([type=checkbox]) {
+    outline: 1px solid var(--dc-green, #26b050);
+}
+
+.invalid {
+    outline: 1px solid var(--dc-red, #e50000);
+}
+
+.validation-message {
+    color: var(--dc-red, #f85149);
+    font-size: 0.78rem;
+}
+
+.blazor-error-boundary {
+    background: #b32121;
+    padding: 1rem 1rem 1rem 1rem;
+    color: white;
+}
+
+    .blazor-error-boundary::after {
+        content: "Ocorreu um erro."
+    }

@@ -1,0 +1,124 @@
+@page "/minha-conta"
+@attribute [Authorize]
+@inject DeskCoreApiClient Api
+
+<PageTitle>@Loc.T("Minha conta", "My account") — DeskCore</PageTitle>
+
+<div class="dc-page-head">
+    <div>
+        <h1 class="dc-page-title">@Loc.T("MINHA CONTA", "MY ACCOUNT")<span class="dc-cursor">_</span></h1>
+        <div class="dc-page-subtitle">@Loc.T("Seus dados e privacidade (LGPD)", "Your data and privacy (LGPD)")</div>
+    </div>
+</div>
+
+@if (loading)
+{
+    <p class="text-muted">@Loc.T("Carregando...", "Loading...")</p>
+}
+else
+{
+    <div class="row g-4">
+        <div class="col-lg-7">
+            <div class="card mb-3">
+                <div class="card-header">@Loc.T("Meus dados", "My data")</div>
+                <div class="card-body">
+                    @if (savedName)
+                    {
+                        <div class="alert alert-success py-2">@Loc.T("Nome atualizado. (O cabeçalho atualiza no próximo login.)", "Name updated. (The header refreshes on your next sign-in.)")</div>
+                    }
+                    @if (error is not null)
+                    {
+                        <div class="alert alert-danger py-2">@error</div>
+                    }
+                    <div class="mb-3">
+                        <label class="form-label">@Loc.T("Nome completo", "Full name")</label>
+                        <input class="form-control" @bind="fullName" maxlength="150" />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">@Loc.T("E-mail", "Email")</label>
+                        <input class="form-control" value="@email" disabled />
+                        <div class="form-text">@Loc.T("Para alterar o e-mail, fale com o suporte.", "To change your email, contact support.")</div>
+                    </div>
+                    <button class="btn btn-primary" @onclick="SaveNameAsync" disabled="@busy">@Loc.T("Salvar nome", "Save name")</button>
+                </div>
+            </div>
+
+            <div class="card mb-3">
+                <div class="card-header">@Loc.T("Privacidade (LGPD)", "Privacy (LGPD)")</div>
+                <div class="card-body">
+                    <p>@Loc.T("Baixe uma cópia dos seus dados ou consulte a", "Download a copy of your data or read the") <a href="/privacidade" target="_blank">@Loc.T("Política de Privacidade", "Privacy Policy")</a>.</p>
+                    <a class="btn btn-outline-secondary" href="/account/export">@Loc.T("Exportar meus dados (JSON)", "Export my data (JSON)")</a>
+                </div>
+            </div>
+
+            <div class="card border-danger">
+                <div class="card-header text-danger">@Loc.T("Excluir minha conta", "Delete my account")</div>
+                <div class="card-body">
+                    <p class="mb-3">
+                        @((MarkupString)Loc.T(
+                            "A exclusão <strong>anonimiza</strong> seus dados pessoais (nome e e-mail viram “Usuário removido”). Os tickets permanecem para histórico, sem te identificar. <strong>Esta ação é irreversível.</strong>",
+                            "Deletion <strong>anonymizes</strong> your personal data (name and email become “Removed user”). Tickets are kept for history, without identifying you. <strong>This action is irreversible.</strong>"))
+                    </p>
+                    <form method="post" action="/account/delete" data-enhance="false">
+                        <AntiforgeryToken />
+                        <div class="form-check mb-3">
+                            <input class="form-check-input" type="checkbox" id="confirmDelete" required />
+                            <label class="form-check-label" for="confirmDelete">@Loc.T("Entendo que esta ação é irreversível.", "I understand this action is irreversible.")</label>
+                        </div>
+                        <button type="submit" class="btn btn-danger">@Loc.T("Excluir minha conta", "Delete my account")</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private bool loading = true;
+    private bool busy;
+    private bool savedName;
+    private string? error;
+    private string fullName = "";
+    private string email = "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var me = await Api.GetMeAsync();
+            if (me is not null)
+            {
+                fullName = me.FullName;
+                email = me.Email;
+            }
+        }
+        catch (ApiException ex)
+        {
+            error = ex.Message;
+        }
+        finally
+        {
+            loading = false;
+        }
+    }
+
+    private async Task SaveNameAsync()
+    {
+        savedName = false;
+        error = null;
+        busy = true;
+        try
+        {
+            await Api.UpdateProfileAsync(new UpdateProfileRequest { FullName = fullName.Trim() });
+            savedName = true;
+        }
+        catch (ApiException ex)
+        {
+            error = ex.Message;
+        }
+        finally
+        {
+            busy = false;
+        }
+    }
+}

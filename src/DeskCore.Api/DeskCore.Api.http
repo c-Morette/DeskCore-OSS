@@ -1,0 +1,6 @@
+@DeskCore.Api_HostAddress = http://localhost:5197
+
+GET {{DeskCore.Api_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

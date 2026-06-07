@@ -1,0 +1,15 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/DeskCore.Api/DeskCore.Api.csproj" />
+    <Project Path="src/DeskCore.Application/DeskCore.Application.csproj" />
+    <Project Path="src/DeskCore.Domain/DeskCore.Domain.csproj" />
+    <Project Path="src/DeskCore.Infrastructure/DeskCore.Infrastructure.csproj" />
+    <Project Path="src/DeskCore.Shared/DeskCore.Shared.csproj" />
+    <Project Path="src/DeskCore.Web/DeskCore.Web.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/DeskCore.Domain.Tests/DeskCore.Domain.Tests.csproj" />
+    <Project Path="tests/DeskCore.Application.Tests/DeskCore.Application.Tests.csproj" />
+    <Project Path="tests/DeskCore.Api.Tests/DeskCore.Api.Tests.csproj" />
+  </Folder>
+</Solution>
